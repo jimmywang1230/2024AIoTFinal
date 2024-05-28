@@ -88,15 +88,18 @@ void loop()
   if (btSerial.available()){  //如果藍牙有傳資料過來
     int i = btSerial.read();  //把讀到的資料丟給i
     Serial.println(i);
+    lcd.clear();
     if (i == 1) {
       inVoteMode = true;
-      voteProcess(P1, P2, P3);
-
+      String result = voteProcess(P1, P2, P3);
+      Serial.println(result);
+      delay(2000);
     } else if (i == 2) {
       inVoteMode = false;
     }
 
   }
+
   // 如果有人不應該來在位置上，而且還投票 蜂鳴器就會響
   if (P1.Showup == 0 && P1.resistor < 600) {
     if (P1.AgreeBtnSt==1 || P1.DisagreeBtnSt ==1) {
@@ -114,25 +117,27 @@ void loop()
     }
   }
   
-
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    // Move the start index of the substring
-    // i_lcd = 0;
-    if (i_lcd <= max(FirstLine.length(), ShowupList.length())) {
-      lcd.setCursor(0, 0);
-      lcd.print(FirstLine.substring(i_lcd + 1, FirstLine.length()));
-      lcd.print(" ");
-      lcd.setCursor(0, 1);
-      lcd.print(ShowupList.substring(i_lcd + 1, ShowupList.length()));
-      lcd.print(" ");
-      i_lcd++;
-    } else {
-      i_lcd = 0; // Reset the index to start scrolling from the beginning
+  if (!inVoteMode) {
+    if (currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis;
+      // Move the start index of the substring
+      // i_lcd = 0;
+      if (i_lcd <= max(FirstLine.length(), ShowupList.length())) {
+        lcd.setCursor(0, 0);
+        lcd.print(FirstLine.substring(i_lcd + 1, FirstLine.length()));
+        lcd.print(" ");
+        lcd.setCursor(0, 1);
+        lcd.print(ShowupList.substring(i_lcd + 1, ShowupList.length()));
+        lcd.print(" ");
+        i_lcd++;
+      } else {
+        i_lcd = 0; // Reset the index to start scrolling from the beginning
+      }
     }
   }
 
-  delay(200);
+
+  delay(1000);
 }
 
 String voteProcess(Participant P1, Participant P2, Participant P3) {
@@ -141,48 +146,51 @@ String voteProcess(Participant P1, Participant P2, Participant P3) {
   String disagreeVote = "";
   int agreeCount = 0;
   int disagreeCount = 0;
-  if (P1.Showup == 1 || P2.Showup == 1 || P3.Showup == 1) {
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Bill 1 Vote");
-    delay(1000);
 
-    // Start the countdown
-    unsigned long startTime = millis();
-    int countdown = 10; // 10 seconds
-    while (countdown >= 0) {
-      // Check if a second has passed
-      if (millis() - startTime >= 1000) {
-        if (P1.AgreeBtnSt == 1 && P1.DisagreeBtnSt == 0) {
-          agreeVote += P1.name + " ";
-          lcd.setCursor(0, 1);
-
-        } else if (P1.AgreeBtnSt == 0 && P1.DisagreeBtnSt == 1) {
-          disagreeVote += P1.name + " ";
-          lcd.setCursor(0, 1);
-        } else if (P2.AgreeBtnSt ==1 && P2.DisagreeBtnSt ==0) {
-          agreeVote += P2.name + " ";
-          lcd.print(agreeVote);
-        } else if (P2.AgreeBtnSt ==0 && P2.DisagreeBtnSt ==1) {
-          disagreeVote += P2.name + " ";
-          lcd.print(disagreeVote);
-        } else if (P3.AgreeBtnSt ==1 && P3.DisagreeBtnSt ==0) {
-          agreeVote += P3.name + " ";
-          lcd.print(agreeVote);
-        } else if (P3.AgreeBtnSt ==0 && P3.DisagreeBtnSt ==1) {
-          disagreeVote += P3.name + " ";
-          lcd.print(disagreeVote);
-        }
-        lcd.setCursor(0, 2);
-        lcd.print("Agree Vote: ");
-        lcd.print(agreeVote);
-        lcd.setCursor(0, 1);
-        lcd.print("Time left: ");
-        lcd.print(countdown);
-        countdown--;
-        startTime = millis();
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Bill 1 Vote");
+  delay(1000);
+  // Start the countdown
+  unsigned long startTime = millis();
+  int countdown = 10; // 10 seconds
+  while (countdown >= 0) {
+    // Check if a second has passed
+    if (millis() - startTime >= 1000) {
+      if (P1.AgreeBtnSt == 1 && P1.DisagreeBtnSt == 0) {
+        agreeVote += P1.name + " ";
+      } else if (P1.AgreeBtnSt == 0 && P1.DisagreeBtnSt == 1) {
+        disagreeVote += P1.name + " ";
+      } else if (P2.AgreeBtnSt ==1 && P2.DisagreeBtnSt ==0) {
+        agreeVote += P2.name + " ";
+      } else if (P2.AgreeBtnSt ==0 && P2.DisagreeBtnSt ==1) {
+        disagreeVote += P2.name + " ";
+      } else if (P3.AgreeBtnSt ==1 && P3.DisagreeBtnSt ==0) {
+        agreeVote += P3.name + " ";
+      } else if (P3.AgreeBtnSt ==0 && P3.DisagreeBtnSt ==1) {
+        disagreeVote += P3.name + " ";
+        lcd.print(disagreeVote);
       }
+
+      lcd.setCursor(0, 1);
+      lcd.print("Time left: ");
+      lcd.print(countdown);
+      countdown--;
+      startTime = millis();
     }
+  }
+  Serial.println("P1.Showup: " + P1.Showup);
+  Serial.println("P2.Showup: " + P2.Showup);
+  Serial.println("P3.Showup: " + P3.Showup);
+
+  if (P1.Showup == 2 || P2.Showup == 2 || P3.Showup == 2) {
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Agree Vote: ");
+    lcd.print(agreeVote);
+    lcd.setCursor(0, 2);
+    lcd.print("Disagree Vote: ");
+    lcd.print(disagreeVote);
     voteResult = agreeVote + " " + disagreeVote;
     return voteResult;
   } else {
@@ -207,6 +215,7 @@ String setShowupList(Participant P1, Participant P2, Participant P3) {
   } else if (P3.Showup==0 && P3.AgreeBtnSt == 1 && P3.DisagreeBtnSt == 1) {
     P3.Showup=1;
   }
+  delay(200);
 
   if (P1.Showup==1) {
     ShowupList += P1.name + " ";
@@ -219,6 +228,8 @@ String setShowupList(Participant P1, Participant P2, Participant P3) {
     P3.Showup=2;
   } 
   delay(200);
+  Serial.println(P1.Showup);
+
   return ShowupList;
 }
 
