@@ -65,33 +65,25 @@ void setup()
   btSerial.begin(9600);
   
   inVoteMode = false;
-
   lcd.begin(16, 2); // 初始化LCD
   lcd.setBacklight(255);
   lcd.clear();
 }
-int prev=0;
+
 void loop()
 {
   unsigned long currentMillis = millis();
-  P1.resistor=analogRead(A0); 
-  P2.resistor=analogRead(A1); 
-  P3.resistor=analogRead(A2);
-  P1.AgreeBtnSt= digitalRead(P1AgreePin);
-  P1.DisagreeBtnSt= digitalRead(P1DisagreePin);
-  P2.AgreeBtnSt= digitalRead(P2AgreePin);
-  P2.DisagreeBtnSt= digitalRead(P2DisagreePin);
-  P3.AgreeBtnSt= digitalRead(P3AgreePin);
-  P3.DisagreeBtnSt= digitalRead(P3DisagreePin);
 
-  ShowupList = setShowupList(P1, P2, P3);
+  checkParticipantSensor();
+
+  ShowupList = setShowupList();
   if (btSerial.available()){  //如果藍牙有傳資料過來
     int i = btSerial.read();  //把讀到的資料丟給i
     Serial.println(i);
     lcd.clear();
     if (i == 1) {
       inVoteMode = true;
-      String result = voteProcess(P1, P2, P3);
+      String result = voteProcess();
       Serial.println(result);
       delay(2000);
     } else if (i == 2) {
@@ -100,23 +92,8 @@ void loop()
 
   }
 
-  // 如果有人不應該來在位置上，而且還投票 蜂鳴器就會響
-  if (P1.Showup == 0 && P1.resistor < 600) {
-    if (P1.AgreeBtnSt==1 || P1.DisagreeBtnSt ==1) {
-      triggeredAlarm(P1.name);
-    }
-  }
-  if (P2.Showup == 0 && P2.resistor < 600) {
-    if (P2.AgreeBtnSt==1 || P2.DisagreeBtnSt ==1) {
-      triggeredAlarm(P2.name);
-    }
-  }
-  if (P3.Showup == 0 && P3.resistor < 600) {
-    if (P3.AgreeBtnSt==1 || P3.DisagreeBtnSt ==1) {
-      triggeredAlarm(P3.name);
-    }
-  }
-  
+
+
   if (!inVoteMode) {
     if (currentMillis - previousMillis >= interval) {
       previousMillis = currentMillis;
@@ -137,10 +114,10 @@ void loop()
   }
 
 
-  delay(1000);
+  delay(200);
 }
 
-String voteProcess(Participant P1, Participant P2, Participant P3) {
+String voteProcess() {
   String voteResult = "";
   String agreeVote = "";
   String disagreeVote = "";
@@ -156,7 +133,9 @@ String voteProcess(Participant P1, Participant P2, Participant P3) {
   int countdown = 10; // 10 seconds
   while (countdown >= 0) {
     // Check if a second has passed
+    checkParticipantSensor();
     if (millis() - startTime >= 1000) {
+      // 參與者投票紀錄
       if (P1.AgreeBtnSt == 1 && P1.DisagreeBtnSt == 0) {
         agreeVote += P1.name + " ";
       } else if (P1.AgreeBtnSt == 0 && P1.DisagreeBtnSt == 1) {
@@ -169,44 +148,61 @@ String voteProcess(Participant P1, Participant P2, Participant P3) {
         agreeVote += P3.name + " ";
       } else if (P3.AgreeBtnSt ==0 && P3.DisagreeBtnSt ==1) {
         disagreeVote += P3.name + " ";
-        lcd.print(disagreeVote);
       }
 
+      // 如果有人不應該來在位置上，而且還投票 蜂鳴器就會響
+      if (P1.Showup == 0 && P1.resistor < 600) {
+        if (P1.AgreeBtnSt==1 || P1.DisagreeBtnSt ==1) {
+          triggeredAlarm(P1.name);
+        }
+      }
+      if (P2.Showup == 0 && P2.resistor < 600) {
+        if (P2.AgreeBtnSt==1 || P2.DisagreeBtnSt ==1) {
+          triggeredAlarm(P2.name);
+        }
+      }
+      if (P3.Showup == 0 && P3.resistor < 600) {
+        if (P3.AgreeBtnSt==1 || P3.DisagreeBtnSt ==1) {
+          triggeredAlarm(P3.name);
+        }
+      }
       lcd.setCursor(0, 1);
       lcd.print("Time left: ");
+      lcd.setCursor(10, 1); // Move cursor back to the start of the countdown
+      if (countdown < 10) {
+        lcd.print("0"); // Print a leading zero for single digit numbers
+      }
       lcd.print(countdown);
+      lcd.print("  "); // Print extra spaces to clear any remaining characters
       countdown--;
       startTime = millis();
     }
   }
-  Serial.println("P1.Showup: " + P1.Showup);
-  Serial.println("P2.Showup: " + P2.Showup);
-  Serial.println("P3.Showup: " + P3.Showup);
 
   if (P1.Showup == 2 || P2.Showup == 2 || P3.Showup == 2) {
     lcd.clear();
-    lcd.setCursor(0, 1);
+    lcd.setCursor(0, 0);
     lcd.print("Agree Vote: ");
     lcd.print(agreeVote);
-    lcd.setCursor(0, 2);
+    lcd.setCursor(0, 1);
     lcd.print("Disagree Vote: ");
     lcd.print(disagreeVote);
-    voteResult = agreeVote + " " + disagreeVote;
-    return voteResult;
+    voteResult = "Agree Vote: " + agreeVote + " Disagree Vote: " + disagreeVote;
+    delay(3000);
   } else {
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("Not all show up");
-    lcd.setCursor(0,1);
-    lcd.print("Can't vote");
-    return "no show up";
+    lcd.print("No one show up");
+    voteResult = "no show up";
   }
-
+  
+  lcd.begin(16, 2);
+  inVoteMode = false;
+  return voteResult;
 }
 
-
 // 顯示出席名單
-String setShowupList(Participant P1, Participant P2, Participant P3) {
+String setShowupList() {
 
   if (P1.Showup==0 && P1.AgreeBtnSt == 1 && P1.DisagreeBtnSt == 1){
     P1.Showup=1;
@@ -228,7 +224,6 @@ String setShowupList(Participant P1, Participant P2, Participant P3) {
     P3.Showup=2;
   } 
   delay(200);
-  Serial.println(P1.Showup);
 
   return ShowupList;
 }
@@ -253,4 +248,16 @@ void triggeredAlarm(String Person) {
     delay(500);
   }
   lcd.begin(16, 2);
+}
+
+void checkParticipantSensor() {
+  P1.resistor=analogRead(A0); 
+  P2.resistor=analogRead(A1); 
+  P3.resistor=analogRead(A2);
+  P1.AgreeBtnSt= digitalRead(P1AgreePin);
+  P1.DisagreeBtnSt= digitalRead(P1DisagreePin);
+  P2.AgreeBtnSt= digitalRead(P2AgreePin);
+  P2.DisagreeBtnSt= digitalRead(P2DisagreePin);
+  P3.AgreeBtnSt= digitalRead(P3AgreePin);
+  P3.DisagreeBtnSt= digitalRead(P3DisagreePin);
 }
