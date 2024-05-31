@@ -1,20 +1,16 @@
 import cv2
 import serial
+import time
 from deepface import DeepFace
-
-# To capture video from webcam
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-cap.set(cv2.CAP_PROP_FPS, 30)
 
 
 def check_faces(frame):
-    
     memberList = "000"
 
     try:
         results = DeepFace.find(
             frame,
-            "./agent1_host/database",
+            "./agent1_sensor_face_recognition/database",
             enforce_detection=False,
             silent=True,
             threshold=0.5,
@@ -22,17 +18,17 @@ def check_faces(frame):
 
         for result in results:
             if not result.empty:
-                # print(f"{result.iloc[0]}\n")
+                print(f"{result.iloc[0]}\n")
                 if result.iloc[0]["distance"] < 0.35:
                     identity = result.iloc[0]["identity"].split("\\")[-2]
                     print(f"=== detect {identity}")
-                    
-                    if identity == 'english':
-                        memberList = '1' + memberList[1:]
-                    elif identity == 'fish':
-                        memberList = memberList[0] + '1' + memberList[2]
+
+                    if identity == "english":
+                        memberList = "1" + memberList[1:]
+                    elif identity == "fish":
+                        memberList = memberList[0] + "1" + memberList[2]
                     else:
-                        memberList = memberList[:2] + '1'
+                        memberList = memberList[:2] + "1"
 
                     # target_x, target_y, target_w, target_h = (
                     #     result["target_x"],
@@ -62,12 +58,15 @@ def check_faces(frame):
     except ValueError:
         pass
 
-    print(memberList)
-    # serial.write(bytes("1".encode('ascii')))
+    print(f"memberList: {memberList}")
+    serial.write(bytes(memberList.encode("ascii")))
     return frame
 
 
-# serial = serial.Serial('COM4', 9600, timeout=0)
+serial = serial.Serial("COM6", 9600, timeout=0)
+time.sleep(2)
+cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FPS, 30)
 counter = 0
 
 while True:
