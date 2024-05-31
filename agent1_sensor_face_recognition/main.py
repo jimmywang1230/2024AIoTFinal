@@ -5,7 +5,7 @@ from deepface import DeepFace
 
 
 def check_faces(frame):
-    memberList = "000"
+    memberDetection = "000"
 
     try:
         results = DeepFace.find(
@@ -19,16 +19,16 @@ def check_faces(frame):
         for result in results:
             if not result.empty:
                 print(f"{result.iloc[0]}\n")
-                if result.iloc[0]["distance"] < 0.35:
+                if result.iloc[0]["distance"] < 0.4:
                     identity = result.iloc[0]["identity"].split("\\")[-2]
                     print(f"=== detect {identity}")
 
                     if identity == "english":
-                        memberList = "1" + memberList[1:]
+                        memberDetection = "1" + memberDetection[1:]
                     elif identity == "fish":
-                        memberList = memberList[0] + "1" + memberList[2]
+                        memberDetection = memberDetection[0] + "1" + memberDetection[2]
                     else:
-                        memberList = memberList[:2] + "1"
+                        memberDetection = memberDetection[:2] + "1"
 
                     # target_x, target_y, target_w, target_h = (
                     #     result["target_x"],
@@ -58,8 +58,8 @@ def check_faces(frame):
     except ValueError:
         pass
 
-    print(f"memberList: {memberList}")
-    serial.write(bytes(memberList.encode("ascii")))
+    print(f"memberDetection: {memberDetection}")
+    serial.write(bytes(memberDetection.encode("ascii")))
     return frame
 
 
