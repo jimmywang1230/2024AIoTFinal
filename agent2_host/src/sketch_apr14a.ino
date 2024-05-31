@@ -1,7 +1,6 @@
 #include <Wire.h>               // I2C函式庫
 #include <LiquidCrystal_PCF8574.h>
 #include <SoftwareSerial.h>
-#include <Wire.h>
 
 SoftwareSerial btSerial(3, 4); // TX, RX
 LiquidCrystal_PCF8574 lcd(0x27);
@@ -16,20 +15,23 @@ const int BuzzerPin = 7;
 int i_lcd = 0; // Index for scrolling the LCD
 unsigned long previousMillis = 0; // will store last time LED was updated
 const long interval = 100; // interval at which to scroll the LCD
+char receivedShowupList[3];
+int length_receivedShowupList;
+
 
 class Participant {
 public:
   String name;
   int AgreeBtnSt;
   int DisagreeBtnSt;
-  int Showup;
+  char Showup;
   int resistor;
 
   Participant() {
     name = "";
     AgreeBtnSt = 0;
     DisagreeBtnSt = 0;
-    Showup = 0;
+    Showup = '0';
     resistor = 0;
   }
 };
@@ -41,7 +43,6 @@ boolean inSigninMode; // 投票模式
 
 
 String FirstLine = "WWelcome to NTUST LiFaUan";
-String canShowupList = "SShowup List: ";
 String actualShowupList = "SShowup List: ";
 String Alarm = "ALERT: ";
 String Alarm2 = "No show but vote";
@@ -63,7 +64,7 @@ void setup()
   P1.name = "English Tsai";
   P2.name = "KP";
   P3.name = "Korea Fish";
-  P1.Showup=0, P2.Showup=0, P3.Showup=0;
+  P1.Showup='0', P2.Showup='0', P3.Showup='0';
   inSigninMode = true;
   
   Serial.begin(9600);
@@ -82,8 +83,9 @@ void loop()
   // Serial.println(inSigninMode);
 
   if (inSigninMode) {
-    canShowupList = setCanShowupList();
-    actualShowupList = waitTransmissionForShowupList();
+    setCanShowupList();
+    waitTransmissionForShowupList();
+    Serial.println(actualShowupList);
   }
 
   if (!inSigninMode && actualShowupList!= "") {
@@ -106,12 +108,12 @@ void loop()
         previousMillis = currentMillis;
         // Move the start index of the substring
         // i_lcd = 0;
-        if (i_lcd <= max(FirstLine.length(), canShowupList.length())) {
+        if (i_lcd <= max(FirstLine.length(), actualShowupList.length())) {
           lcd.setCursor(0, 0);
           lcd.print(FirstLine.substring(i_lcd + 1, FirstLine.length()));
           lcd.print(" ");
           lcd.setCursor(0, 1);
-          lcd.print(canShowupList.substring(i_lcd + 1, canShowupList.length()));
+          lcd.print(actualShowupList.substring(i_lcd + 1, actualShowupList.length()));
           lcd.print(" ");
           i_lcd++;
         } else {
@@ -158,17 +160,17 @@ String voteProcess() {
       }
 
       // 如果有人不應該來在位置上，而且還投票 蜂鳴器就會響
-      if (P1.Showup == 0 && P1.resistor < 600) {
+      if (P1.Showup == '0' && P1.resistor < 600) {
         if (P1.AgreeBtnSt==1 || P1.DisagreeBtnSt ==1) {
           triggeredAlarm(P1.name);
         }
       }
-      if (P2.Showup == 0 && P2.resistor < 600) {
+      if (P2.Showup == '0' && P2.resistor < 600) {
         if (P2.AgreeBtnSt==1 || P2.DisagreeBtnSt ==1) {
           triggeredAlarm(P2.name);
         }
       }
-      if (P3.Showup == 0 && P3.resistor < 600) {
+      if (P3.Showup == '0' && P3.resistor < 600) {
         if (P3.AgreeBtnSt==1 || P3.DisagreeBtnSt ==1) {
           triggeredAlarm(P3.name);
         }
@@ -186,7 +188,7 @@ String voteProcess() {
     }
   }
 
-  if (P1.Showup == 2 || P2.Showup == 2 || P3.Showup == 2) {
+  if (P1.Showup == '2' || P2.Showup == '2' || P3.Showup == '2') {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Agree Vote: ");
@@ -209,10 +211,9 @@ String voteProcess() {
 }
 
 // 顯示出席名單
-String setCanShowupList() {
+void setCanShowupList() {
   checkParticipantSensor();
   char sendCanShowupList[] = "000";
-  Serial.println(sendCanShowupList[0]);
 
   // 10秒輸入可以出席的人
   lcd.clear();
@@ -226,28 +227,25 @@ String setCanShowupList() {
     // Check if a second has passed
     checkParticipantSensor();
     if (millis() - startTime >= 1000) {
-      if (P1.Showup==0 && P1.AgreeBtnSt == 1 && P1.DisagreeBtnSt == 1){
-        P1.Showup=1;
-      } else if (P2.Showup==0 && P2.AgreeBtnSt == 1 && P2.DisagreeBtnSt ==1) {
-        P2.Showup=1;
-      } else if (P3.Showup==0 && P3.AgreeBtnSt == 1 && P3.DisagreeBtnSt == 1) {
-        P3.Showup=1;
+      if (P1.Showup=='0' && P1.AgreeBtnSt == 1 && P1.DisagreeBtnSt == 1){
+        P1.Showup='1';
+      } else if (P2.Showup=='0' && P2.AgreeBtnSt == 1 && P2.DisagreeBtnSt ==1) {
+        P2.Showup='1';
+      } else if (P3.Showup=='0' && P3.AgreeBtnSt == 1 && P3.DisagreeBtnSt == 1) {
+        P3.Showup='1';
       }
 
-      if (P1.Showup==1) {
-        canShowupList += P1.name + " ";
+      if (P1.Showup=='1') {
         sendCanShowupList[0] = '1';
-        P1.Showup=2;
+        P1.Showup='2';
         delay(500);
-      } else if (P2.Showup==1) {
-        canShowupList += P2.name + " ";
+      } else if (P2.Showup=='1') {
         sendCanShowupList[1] = '1';
-        P2.Showup=2;
+        P2.Showup='2';
         delay(500);
-      } else if (P3.Showup==1) {
-        canShowupList += P3.name + " ";
+      } else if (P3.Showup=='1') {
         sendCanShowupList[2] = '1';
-        P3.Showup=2;
+        P3.Showup='2';
         delay(500);
       } 
       lcd.setCursor(0, 1);
@@ -262,10 +260,7 @@ String setCanShowupList() {
       startTime = millis();
     }
     
-    // Serial.println(sendCanShowupList);
-    String str(sendCanShowupList);
-    // Serial.println(countdown);
-    if (countdown== -1 && str != "000") {
+    if (countdown== -1 && sendCanShowupList != "000") {
       // 透過I2C傳送資料
       Wire.beginTransmission(8); // 開始與地址為8的裝置通信
       Wire.print(sendCanShowupList);       // 發送"Hello"字串
@@ -275,28 +270,29 @@ String setCanShowupList() {
   }
   delay(200);
 
-  return canShowupList;
 }
 
-String waitTransmissionForShowupList() {
+void waitTransmissionForShowupList() {
   Wire.requestFrom(8, 3);    // 要求從地址為8的裝置接收6個字元
-  String str = "";
-  while (Wire.available()) { // 當有資料可讀取時
-    char c = Wire.read();    // 讀取資料
-    str += c;
+  for (int i = 0; i < 3; i++) {
+    char x = Wire.read();
+    receivedShowupList[i] = x;
   }
-  Serial.println(str);
-  if (str != "") {
-    // lcd.clear();
-    // lcd.setCursor(0, 0);
-    // lcd.print(actualShowupList);
-    // lcd.setCursor(0, 1);
-    // lcd.print(str);
-    // delay(2000);
+  Serial.println("Received showup list: ");
+  for (int i = 0; i < 3; i++) {
+    Serial.println(receivedShowupList[i]);
+  }
+  length_receivedShowupList = sizeof(receivedShowupList) / sizeof(receivedShowupList[0]);
+  if (length_receivedShowupList == 3) {
+    P1.Showup = receivedShowupList[0];
+    P2.Showup = receivedShowupList[1];
+    P3.Showup = receivedShowupList[2];
+
+    if (P1.Showup == '1'){ actualShowupList += P1.name + " ";} 
+    if (P2.Showup == '1'){ actualShowupList += P2.name + " ";} 
+    if (P3.Showup == '1'){ actualShowupList += P3.name + " ";}
+
     inSigninMode = false;
-    return str;
-  } else {
-    return str;
   }
 
 }
