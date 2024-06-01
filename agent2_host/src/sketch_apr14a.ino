@@ -1,6 +1,7 @@
-#include <Wire.h>               // I2C函式庫
+// #include <Wire.h>               // I2C函式庫
 #include <LiquidCrystal_PCF8574.h>
 #include <SoftwareSerial.h>
+
 
 SoftwareSerial btSerial(3, 4); // TX, RX
 LiquidCrystal_PCF8574 lcd(0x27);
@@ -58,7 +59,7 @@ void setup()
   pinMode(P2DisagreePin, INPUT);
   pinMode(P3AgreePin, INPUT);
   pinMode(P3DisagreePin, INPUT);
-  Wire.begin();           // 加入I2C總線
+  // Wire.begin();           // 加入I2C總線
 
   // 設定參與者名字
   P1.name = "English Tsai";
@@ -85,18 +86,19 @@ void loop()
   if (inSigninMode) {
     setCanShowupList();
     waitTransmissionForShowupList();
-    Serial.println(actualShowupList);
+    // Serial.println(actualShowupList);
   }
 
-  if (!inSigninMode && actualShowupList!= "") {
+  if (!inSigninMode && actualShowupList!= "SShowup List: ") {
     if (btSerial.available()){  //如果藍牙有傳資料過來
       int i = btSerial.read();  //把讀到的資料丟給i
-      Serial.println(i);
+      // Serial.println(i);
       lcd.clear();
       if (i == 1) {
         inVoteMode = true;
-        String result = voteProcess();
-        Serial.println(result);
+        bool result = voteProcess();
+        inVoteMode = result;
+        // Serial.println(result);
         delay(2000);
       } else if (i == 2) {
         inVoteMode = false;
@@ -125,8 +127,8 @@ void loop()
   delay(1000);
 }
 
-String voteProcess() {
-  checkParticipantSensor();
+bool voteProcess() {
+  // checkParticipantSensor();
   String voteResult = "";
   String agreeVote = "";
   String disagreeVote = "";
@@ -144,37 +146,53 @@ String voteProcess() {
     // Check if a second has passed
     checkParticipantSensor();
     if (millis() - startTime >= 1000) {
-      // 參與者投票紀錄
-      if (P1.AgreeBtnSt == 1 && P1.DisagreeBtnSt == 0) {
-        agreeVote += P1.name + " ";
-      } else if (P1.AgreeBtnSt == 0 && P1.DisagreeBtnSt == 1) {
-        disagreeVote += P1.name + " ";
-      } else if (P2.AgreeBtnSt ==1 && P2.DisagreeBtnSt ==0) {
-        agreeVote += P2.name + " ";
-      } else if (P2.AgreeBtnSt ==0 && P2.DisagreeBtnSt ==1) {
-        disagreeVote += P2.name + " ";
-      } else if (P3.AgreeBtnSt ==1 && P3.DisagreeBtnSt ==0) {
-        agreeVote += P3.name + " ";
-      } else if (P3.AgreeBtnSt ==0 && P3.DisagreeBtnSt ==1) {
-        disagreeVote += P3.name + " ";
-      }
-
       // 如果有人不應該來在位置上，而且還投票 蜂鳴器就會響
       if (P1.Showup == '0' && P1.resistor < 600) {
         if (P1.AgreeBtnSt==1 || P1.DisagreeBtnSt ==1) {
           triggeredAlarm(P1.name);
+          return false;
         }
       }
       if (P2.Showup == '0' && P2.resistor < 600) {
         if (P2.AgreeBtnSt==1 || P2.DisagreeBtnSt ==1) {
           triggeredAlarm(P2.name);
+          return false;
         }
       }
       if (P3.Showup == '0' && P3.resistor < 600) {
         if (P3.AgreeBtnSt==1 || P3.DisagreeBtnSt ==1) {
           triggeredAlarm(P3.name);
+          return false;
         }
       }
+      // 參與者投票紀錄
+      if (P1.AgreeBtnSt == 1 && P1.DisagreeBtnSt == 0) {
+        if (!checkAlreadyVote(P1.name, agreeVote, disagreeVote)) {
+          agreeVote += P1.name + " ";
+        }
+      } else if (P1.AgreeBtnSt == 0 && P1.DisagreeBtnSt == 1) {
+        if (!checkAlreadyVote(P1.name, agreeVote, disagreeVote)) {
+          disagreeVote += P1.name + " ";
+        }
+      } else if (P2.AgreeBtnSt ==1 && P2.DisagreeBtnSt ==0) {
+        if (!checkAlreadyVote(P2.name, agreeVote, disagreeVote)) {
+          agreeVote += P2.name + " ";
+        }
+      } else if (P2.AgreeBtnSt ==0 && P2.DisagreeBtnSt ==1) {
+        if (!checkAlreadyVote(P2.name, agreeVote, disagreeVote)) {
+          disagreeVote += P2.name + " ";
+        }
+      } else if (P3.AgreeBtnSt ==1 && P3.DisagreeBtnSt ==0) {
+        if (!checkAlreadyVote(P3.name, agreeVote, disagreeVote)) {
+          agreeVote += P3.name + " ";
+        }
+      } else if (P3.AgreeBtnSt ==0 && P3.DisagreeBtnSt ==1) {
+        if (!checkAlreadyVote(P3.name, agreeVote, disagreeVote)) {
+          disagreeVote += P3.name + " ";
+        }
+      }
+
+
       lcd.setCursor(0, 1);
       lcd.print("Time left: ");
       lcd.setCursor(10, 1); // Move cursor back to the start of the countdown
@@ -188,7 +206,7 @@ String voteProcess() {
     }
   }
 
-  if (P1.Showup == '2' || P2.Showup == '2' || P3.Showup == '2') {
+  if (P1.Showup == '1' || P2.Showup == '1' || P3.Showup == '1') {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Agree Vote: ");
@@ -204,10 +222,22 @@ String voteProcess() {
     lcd.print("No one show up");
     voteResult = "no show up";
   }
-  
+  // Serial.println(voteResult);
   lcd.begin(16, 2);
   inVoteMode = false;
-  return voteResult;
+  return inVoteMode;
+}
+
+bool checkAlreadyVote(String name, String agreeVote, String disagreeVote) {
+
+  if (agreeVote.indexOf(name) != -1) {
+    return true; // The name is in the agreeVote list
+  }
+
+  if (disagreeVote.indexOf(name) != -1) {
+    return true; // The name is in the disagreeVote list
+  }
+  return false;
 }
 
 // 顯示出席名單
@@ -260,11 +290,16 @@ void setCanShowupList() {
       startTime = millis();
     }
     
+    // if (countdown== -1 && sendCanShowupList != "000") {
+    //   // 透過I2C傳送資料
+    //   Wire.beginTransmission(8); // 開始與地址為8的裝置通信
+    //   Wire.print(sendCanShowupList);       
+    //   Wire.endTransmission();    // 結束傳輸
+    //   delay(500);
+    // }
     if (countdown== -1 && sendCanShowupList != "000") {
       // 透過I2C傳送資料
-      Wire.beginTransmission(8); // 開始與地址為8的裝置通信
-      Wire.print(sendCanShowupList);       // 發送"Hello"字串
-      Wire.endTransmission();    // 結束傳輸
+      Serial.print(sendCanShowupList);       
       delay(500);
     }
   }
@@ -273,14 +308,11 @@ void setCanShowupList() {
 }
 
 void waitTransmissionForShowupList() {
-  Wire.requestFrom(8, 3);    // 要求從地址為8的裝置接收6個字元
-  for (int i = 0; i < 3; i++) {
-    char x = Wire.read();
+  int i = 0; // Declare i
+  while(Serial.available() && i < 3) {
+    char x = Serial.read();
     receivedShowupList[i] = x;
-  }
-  Serial.println("Received showup list: ");
-  for (int i = 0; i < 3; i++) {
-    Serial.println(receivedShowupList[i]);
+    i++;
   }
   length_receivedShowupList = sizeof(receivedShowupList) / sizeof(receivedShowupList[0]);
   if (length_receivedShowupList == 3) {
@@ -316,6 +348,11 @@ void triggeredAlarm(String Person) {
     lcd.noDisplay();
     delay(500);
   }
+  lcd.display();
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("VOTE END");
+  delay(2000);
   lcd.begin(16, 2);
 }
 
