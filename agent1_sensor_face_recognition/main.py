@@ -1,11 +1,12 @@
 import cv2
 import serial
 import time
+import bluetooth
 from deepface import DeepFace
 
 
 def check_faces(frame):
-    memberDetection = "000"
+    memberDetection = 0
 
     try:
         results = DeepFace.find(
@@ -24,11 +25,11 @@ def check_faces(frame):
                     print(f"=== detect {identity}")
 
                     if identity == "english":
-                        memberDetection = "1" + memberDetection[1:]
+                        memberDetection += 4
                     elif identity == "kp":
-                        memberDetection = memberDetection[0] + "1" + memberDetection[2]
+                        memberDetection += 2
                     else:
-                        memberDetection = memberDetection[:2] + "1"
+                        memberDetection += 1
 
                     # target_x, target_y, target_w, target_h = (
                     #     result["target_x"],
@@ -58,15 +59,25 @@ def check_faces(frame):
     except ValueError:
         pass
 
-    print(f"memberDetection: {memberDetection}")
-    serial.write(bytes(memberDetection.encode("ascii")))
+    # filter out the unknown face
+    if memberDetection != 0:
+        print(f"memberDetection: {bytes([memberDetection])}")
+        # serial.write(bytes(chr(memberDetection).encode()))
+        socket.send(chr(memberDetection))
     return frame
 
 
-serial = serial.Serial("COM6", 9600, timeout=0)
+# serial = serial.Serial("COM6", 9600)
+
+# create bt socket and connect to the device
+socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+socket.connect(('98:D3:31:80:67:70', 1))
+
+
 time.sleep(2)
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FPS, 30)
+cv2.namedWindow("img", cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
 counter = 0
 
 while True:
@@ -89,3 +100,4 @@ while True:
         break
 
 cap.release()
+socket.close()
