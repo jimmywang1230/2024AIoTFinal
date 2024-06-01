@@ -25,7 +25,7 @@ def check_faces(frame):
 
                     if identity == "english":
                         memberDetection = "1" + memberDetection[1:]
-                    elif identity == "fish":
+                    elif identity == "kp":
                         memberDetection = memberDetection[0] + "1" + memberDetection[2]
                     else:
                         memberDetection = memberDetection[:2] + "1"
