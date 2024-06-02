@@ -71,7 +71,7 @@ void setup() {
     lcd.setBacklight(255);
     lcd.clear();
 }
-
+bool in = false;
 void loop() {
     unsigned long currentMillis = millis();
 
@@ -307,17 +307,23 @@ void waitTransmissionForShowupList() {
     lcd.print("Wait for Att");
     lcd.setCursor(0, 1);
     lcd.print("Showup List");
-    while (!Serial.available() && i > 3) {
-      lcd.noDisplay();
-      delay(500);
-      lcd.display();
-      delay(500);
+
+    //  && i > 3
+    while (!Serial.available()) {
+        lcd.noDisplay();
+        delay(500);
+        lcd.display();
+        delay(500);
     }
     while (Serial.available() && i < 3) {
         char x = Serial.read();
         receivedShowupList[i] = x;
         i++;
     }
+    lcd.setCursor(0, 1);
+    lcd.print(String(receivedShowupList));
+    lcd.print(" ");
+
     length_receivedShowupList = sizeof(receivedShowupList) / sizeof(receivedShowupList[0]);
     if (length_receivedShowupList == 3) {
         P1.Showup = receivedShowupList[0];

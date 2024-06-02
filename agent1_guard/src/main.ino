@@ -80,19 +80,24 @@ void setup() {
     lcd.begin(16, 2);
     lcd.setBacklight(255);
     lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("hello");
 
     // init servo
     servo.attach(servoPin);
     servo.write(0);
     delay(1000);
     servo.detach();
+
+    // 設定參與者名字
+    P1.name = "English";
+    P2.name = "KP";
+    P3.name = "Fish";
+    P1.Showup = false, P2.Showup = false, P3.Showup = false;
 }
 
 void loop() {
     currentMillis = millis();
-    // getAttendanceList();   //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // showAttendanceList();  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // getShowUpListBT();     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (waitForAttendanceList) {
         getAttendanceList();
         showAttendanceList();
@@ -103,58 +108,31 @@ void loop() {
     }
 
     // Show the showup list on the LCD
-    // if (length_receivedAttendanceList == 3) {
-    //     if (receivedAttendanceList[0] == 1) {
-    //         attendanceList += P1.name + " ";
-    //     } else if (receivedAttendanceList[1] == 1) {
-    //         attendanceList += P2.name + " ";
-    //     } else if (receivedAttendanceList[2] == 1) {
-    //         attendanceList += P3.name + " ";
-    //     }
-    //     if (currentMillis - previousMillis >= LCD_INTERVAL) {
-    //         previousMillis = currentMillis;
-    //         // Move the start index of the substring
-    //         i_lcd = 0;
-    //         if (i_lcd <= max(FirstLine.length(), attendanceList.length())) {
-    //             lcd.setCursor(0, 0);
-    //             lcd.print(FirstLine.substring(i_lcd + 1, FirstLine.length()));
-    //             lcd.print(" ");
-    //             lcd.setCursor(0, 1);
-    //             lcd.print(attendanceList.substring(i_lcd + 1, attendanceList.length()));
-    //             lcd.print(" ");
-    //             i_lcd++;
-    //         } else {
-    //             i_lcd = 0;  // Reset the index to start scrolling from the beginning
-    //         }
-    //     }
-    // }
+    if (receivedAttendanceList[0] == '1') {
+        attendanceList += P1.name + " ";
+    } else if (receivedAttendanceList[1] == '1') {
+        attendanceList += P2.name + " ";
+    } else if (receivedAttendanceList[2] == '1') {
+        attendanceList += P3.name + " ";
+    }
+    if (currentMillis - previousMillis >= LCD_INTERVAL) {
+        previousMillis = currentMillis;
+        // Move the start index of the substring
+        i_lcd = 0;
+        if (i_lcd <= max(FirstLine.length(), attendanceList.length())) {
+            lcd.setCursor(0, 0);
+            lcd.print(FirstLine.substring(i_lcd + 1, FirstLine.length()));
+            lcd.print(" ");
+            lcd.setCursor(0, 1);
+            lcd.print(attendanceList.substring(i_lcd + 1, attendanceList.length()));
+            lcd.print(" ");
+            i_lcd++;
+        } else {
+            i_lcd = 0;  // Reset the index to start scrolling from the beginning
+        }
+    }
 
     delay(100);
-}
-
-void getShowUpList() {
-    showUpList = 0;  // reset show up list
-    int num = 0;
-
-    // get show up list from camera
-    while (true) {
-        while (Serial.available() > 0) {
-            byte inByte = Serial.read();
-            Serial.println(inByte);
-            num = (inByte - '0');
-        }
-
-        lcd.setCursor(0, 0);
-        lcd.print(num);
-        lcd.print(" ");
-
-        if (num != 0) {
-            showUpList = num;
-            checkAttendance();  // open gate and turn on led
-        }
-        num = 0;
-        lcd.clear();
-    }
 }
 
 void getShowUpListBT() {
@@ -168,16 +146,11 @@ void getShowUpListBT() {
             num = (inByte - '0');
         }
 
-        lcd.setCursor(0, 0);
-        lcd.print(num);
-        lcd.print(" ");
-
         if (num != 0) {
             showUpList = num;
             checkAttendance();  // open gate and turn on led
         }
         num = 0;
-        lcd.clear();
     }
 }
 
@@ -218,7 +191,7 @@ void checkAttendance() {
  * @brief send showup list to agent2
  */
 void sendShowUpList() {
-    char showUpListToSend[3];
+    char showUpListToSend[4] = "000";
 
     // english show up
     if (P1.Showup) {
@@ -241,7 +214,10 @@ void sendShowUpList() {
         showUpListToSend[2] = '0';
     }
 
-    Serial.print(showUpListToSend);
+    lcd.setCursor(0, 0);
+    lcd.print(String(showUpListToSend));
+    lcd.print(" ");
+    Serial.print(String(showUpListToSend));
     delay(600);
 }
 

@@ -16,5 +16,5 @@ while True:
     if keyboard.is_pressed("space"):  # if the 'space' key is pressed
         print("Space key pressed")
         # arduino.write(bytes("1".encode()))
-        socket.send("7")
+        socket.send("4")
         time.sleep(0.5)  # prevent bouncing effect
