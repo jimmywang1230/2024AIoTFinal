@@ -242,6 +242,7 @@ void sendShowUpList() {
     }
 
     Serial.print(showUpListToSend);
+    delay(600);
 }
 
 /**

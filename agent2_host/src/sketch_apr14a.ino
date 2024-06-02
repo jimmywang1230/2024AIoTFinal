@@ -104,6 +104,8 @@ void loop() {
                 previousMillis = currentMillis;
                 // Move the start index of the substring
                 // i_lcd = 0;
+                lcd.begin(16, 2);
+                lcd.clear();
                 if (i_lcd <= max(FirstLine.length(), actualShowupList.length())) {
                     lcd.setCursor(0, 0);
                     lcd.print(FirstLine.substring(i_lcd + 1, FirstLine.length()));
@@ -300,6 +302,17 @@ void setCanShowupList() {
 
 void waitTransmissionForShowupList() {
     int i = 0;  // Declare i
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Wait for Att");
+    lcd.setCursor(0, 1);
+    lcd.print("Showup List");
+    while (!Serial.available() && i > 3) {
+      lcd.noDisplay();
+      delay(500);
+      lcd.display();
+      delay(500);
+    }
     while (Serial.available() && i < 3) {
         char x = Serial.read();
         receivedShowupList[i] = x;
