@@ -1,4 +1,3 @@
-// #include <Wire.h>               // I2C函式庫
 #include <LiquidCrystal_PCF8574.h>
 #include <SoftwareSerial.h>
 
@@ -38,7 +37,7 @@ class Participant {
 Participant P1, P2, P3;
 
 boolean inVoteMode;    // 投票模式
-boolean inSigninMode;  // 投票模式
+boolean inSigninMode;  // 註冊出席人模式
 
 String FirstLine = "WWelcome to NTUST LiFaUan";
 String actualShowupList = "SShowup List: ";
@@ -47,19 +46,18 @@ String Alarm2 = "No show but vote";
 
 void setup() {
     pinMode(13, OUTPUT);
-    pinMode(BuzzerPin, OUTPUT);  // digitalWrite(7,HIGH) or LOW;
+    pinMode(BuzzerPin, OUTPUT);
     pinMode(P1AgreePin, INPUT);
     pinMode(P1DisagreePin, INPUT);
     pinMode(P2AgreePin, INPUT);
     pinMode(P2DisagreePin, INPUT);
     pinMode(P3AgreePin, INPUT);
     pinMode(P3DisagreePin, INPUT);
-    // Wire.begin();           // 加入I2C總線
 
     // 設定參與者名字
-    P1.name = "English Tsai";
+    P1.name = "Eng";
     P2.name = "KP";
-    P3.name = "Korea Fish";
+    P3.name = "Fish";
     P1.Showup = '0', P2.Showup = '0', P3.Showup = '0';
     inSigninMode = true;
 
@@ -67,7 +65,9 @@ void setup() {
     btSerial.begin(9600);
 
     inVoteMode = false;
-    lcd.begin(16, 2);  // 初始化LCD
+
+    // 初始化LCD
+    lcd.begin(16, 2);
     lcd.setBacklight(255);
     lcd.clear();
 }
@@ -135,6 +135,7 @@ bool voteProcess() {
     lcd.setCursor(0, 0);
     lcd.print("Bill 1 Vote");
     delay(1000);
+
     // Start the countdown
     unsigned long startTime = millis();
     int countdown = 10;  // 10 seconds
@@ -142,25 +143,46 @@ bool voteProcess() {
         // Check if a second has passed
         checkParticipantSensor();
         if (millis() - startTime >= 1000) {
-            // 如果有人不應該來在位置上，而且還投票 蜂鳴器就會響
-            if (P1.Showup == '0' && P1.resistor < 600) {
+            // 如果有人 no show up，卻投票，蜂鳴器就會響
+            if (P1.Showup == '0') {
                 if (P1.AgreeBtnSt == 1 || P1.DisagreeBtnSt == 1) {
                     triggeredAlarm(P1.name);
                     return false;
                 }
             }
-            if (P2.Showup == '0' && P2.resistor < 600) {
+            if (P2.Showup == '0') {
                 if (P2.AgreeBtnSt == 1 || P2.DisagreeBtnSt == 1) {
                     triggeredAlarm(P2.name);
                     return false;
                 }
             }
-            if (P3.Showup == '0' && P3.resistor < 600) {
+            if (P3.Showup == '0') {
                 if (P3.AgreeBtnSt == 1 || P3.DisagreeBtnSt == 1) {
                     triggeredAlarm(P3.name);
                     return false;
                 }
             }
+
+            // 如果有人 show up 但不在位置上，而且還投票 蜂鳴器就會響
+            if (P1.Showup == '1' && P1.resistor > 600) {
+                if (P1.AgreeBtnSt == 1 || P1.DisagreeBtnSt == 1) {
+                    triggeredAlarm(P1.name);
+                    return false;
+                }
+            }
+            if (P2.Showup == '1' && P2.resistor > 600) {
+                if (P2.AgreeBtnSt == 1 || P2.DisagreeBtnSt == 1) {
+                    triggeredAlarm(P2.name);
+                    return false;
+                }
+            }
+            if (P3.Showup == '1' && P3.resistor > 600) {
+                if (P3.AgreeBtnSt == 1 || P3.DisagreeBtnSt == 1) {
+                    triggeredAlarm(P3.name);
+                    return false;
+                }
+            }
+
             // 參與者投票紀錄
             if (P1.AgreeBtnSt == 1 && P1.DisagreeBtnSt == 0) {
                 if (!checkAlreadyVote(P1.name, agreeVote, disagreeVote)) {
@@ -204,13 +226,12 @@ bool voteProcess() {
     if (P1.Showup == '1' || P2.Showup == '1' || P3.Showup == '1') {
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("Agree Vote: ");
+        lcd.print("Agree: ");
         lcd.print(agreeVote);
         lcd.setCursor(0, 1);
-        lcd.print("Disagree Vote: ");
+        lcd.print("Disagree: ");
         lcd.print(disagreeVote);
-        voteResult = "Agree Vote: " + agreeVote + " Disagree Vote: " + disagreeVote;
-        delay(3000);
+        delay(5000);
     } else {
         lcd.clear();
         lcd.setCursor(0, 0);
@@ -239,14 +260,14 @@ void setCanShowupList() {
     checkParticipantSensor();
     char sendCanShowupList[] = "000";
 
-    // 10秒輸入可以出席的人
+    // 5 秒輸入可以出席的人
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("set valid Att");
     delay(1000);
     // Start the countdown
     unsigned long startTime = millis();
-    int countdown = 10;  // 10 seconds
+    int countdown = 5;  // 10 seconds
     while (countdown >= 0) {
         // Check if a second has passed
         checkParticipantSensor();
@@ -284,13 +305,6 @@ void setCanShowupList() {
             startTime = millis();
         }
 
-        // if (countdown== -1 && sendCanShowupList != "000") {
-        //   // 透過I2C傳送資料
-        //   Wire.beginTransmission(8); // 開始與地址為8的裝置通信
-        //   Wire.print(sendCanShowupList);
-        //   Wire.endTransmission();    // 結束傳輸
-        //   delay(500);
-        // }
         if (countdown == -1 && sendCanShowupList != "000") {
             // 透過I2C傳送資料
             Serial.print(sendCanShowupList);

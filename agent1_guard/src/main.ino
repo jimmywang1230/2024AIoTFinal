@@ -3,20 +3,18 @@
 #include <Servo.h>
 #include <SoftwareSerial.h>
 
-#define ENTRY_INTERVAL 20000
+#define ENTRY_INTERVAL 10000
 #define LCD_INTERVAL 100
 
 // declare global variables
 char receivedAttendanceList[3] = {'1', '1', '1'};
-byte showUpList = 0;
-unsigned long currentMillis = 0;
-int length_receivedAttendanceList;
-int i_lcd = 0;                     // Index for scrolling the LCD
-unsigned long previousMillis = 0;  // will store last time LED was updated
+byte showUpList = 0;              // received camera via BT
+unsigned long currentMillis = 0;  // Index for scrolling the LCD
 bool waitForAttendanceList = true;
 bool requestForShowUpList = true;
-String FirstLine = "WWelcome to NTUST LiFaUan";
-String attendanceList = "SShowup List: ";
+// String FirstLine = "Can Attendance";
+char FirstLine[] = "Can Attendance";
+String attendanceList = " ";
 long entryMillis = 0;
 byte servoPos = 0;
 
@@ -90,7 +88,7 @@ void setup() {
     servo.detach();
 
     // 設定參與者名字
-    P1.name = "English";
+    P1.name = "Eng";
     P2.name = "KP";
     P3.name = "Fish";
     P1.Showup = false, P2.Showup = false, P3.Showup = false;
@@ -101,38 +99,35 @@ void loop() {
     if (waitForAttendanceList) {
         getAttendanceList();
         showAttendanceList();
+
+        // Show the showup list on the LCD
+        if (receivedAttendanceList[0] == '1') {
+            attendanceList += P1.name + " ";
+            receivedAttendanceList[0] == '2';
+        }
+        if (receivedAttendanceList[1] == '1') {
+            attendanceList += P2.name + " ";
+            receivedAttendanceList[1] == '2';
+        }
+        if (receivedAttendanceList[2] == '1') {
+            attendanceList += P3.name + " ";
+            receivedAttendanceList[2] == '2';
+        }
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print(String(FirstLine));
+        lcd.print(" ");
+        lcd.setCursor(0, 1);
+        lcd.print(attendanceList);
+        lcd.print(" ");
+
     } else if (!waitForAttendanceList && requestForShowUpList) {
         getShowUpListBT();
         sendShowUpList();
         requestForShowUpList = false;
     }
 
-    // Show the showup list on the LCD
-    if (receivedAttendanceList[0] == '1') {
-        attendanceList += P1.name + " ";
-    } else if (receivedAttendanceList[1] == '1') {
-        attendanceList += P2.name + " ";
-    } else if (receivedAttendanceList[2] == '1') {
-        attendanceList += P3.name + " ";
-    }
-    if (currentMillis - previousMillis >= LCD_INTERVAL) {
-        previousMillis = currentMillis;
-        // Move the start index of the substring
-        i_lcd = 0;
-        if (i_lcd <= max(FirstLine.length(), attendanceList.length())) {
-            lcd.setCursor(0, 0);
-            lcd.print(FirstLine.substring(i_lcd + 1, FirstLine.length()));
-            lcd.print(" ");
-            lcd.setCursor(0, 1);
-            lcd.print(attendanceList.substring(i_lcd + 1, attendanceList.length()));
-            lcd.print(" ");
-            i_lcd++;
-        } else {
-            i_lcd = 0;  // Reset the index to start scrolling from the beginning
-        }
-    }
-
-    delay(100);
+    delay(1000);
 }
 
 void getShowUpListBT() {
@@ -214,11 +209,15 @@ void sendShowUpList() {
         showUpListToSend[2] = '0';
     }
 
-    lcd.setCursor(0, 0);
-    lcd.print(String(showUpListToSend));
-    lcd.print(" ");
-    Serial.print(String(showUpListToSend));
-    delay(600);
+    Serial.print(showUpListToSend);
+    // lcd.clear();
+    // lcd.setCursor(0, 0);
+    // lcd.print("Show up list:");
+    // lcd.setCursor(0, 1);
+    // lcd.print(String(showUpListToSend));
+
+
+    delay(1000);
 }
 
 /**
@@ -238,7 +237,6 @@ void getAttendanceList() {
                     i++;
                 }
             }
-            length_receivedAttendanceList = sizeof(receivedAttendanceList) / sizeof(receivedAttendanceList[0]);
             waitForAttendanceList = false;
         }
     }
