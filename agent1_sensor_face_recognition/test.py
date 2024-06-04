@@ -1,4 +1,3 @@
-import serial
 import time
 import keyboard
 import bluetooth

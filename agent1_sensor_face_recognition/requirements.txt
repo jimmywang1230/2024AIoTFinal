@@ -1,3 +1,5 @@
 deepface
-pyserial
-# pip install git+https://github.com/pybluez/pybluez.git#egg=pybluez
+tf-keras
+keyboard
+git+https://github.com/pybluez/pybluez.git
+# git+https://github.com/pybluez/pybluez.git#egg=pybluez

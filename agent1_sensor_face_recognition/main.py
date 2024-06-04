@@ -1,7 +1,7 @@
-import cv2
-import serial
 import time
+
 import bluetooth
+import cv2
 from deepface import DeepFace
 
 
@@ -62,12 +62,9 @@ def check_faces(frame):
     # filter out the unknown face
     if memberDetection != 0:
         print(f"memberDetection: {bytes([memberDetection])}")
-        # serial.write(bytes(chr(memberDetection).encode()))
         socket.send(chr(memberDetection))
     return frame
 
-
-# serial = serial.Serial("COM6", 9600)
 
 # create bt socket and connect to the device
 socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
